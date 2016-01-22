@@ -31,3 +31,29 @@ Or you can create a connection object manually. You'll want to do this in order 
 To run tests:
 
     $ python setup.py test
+    
+### Example API call
+
+This is an example call to create a content item. It is using all of the known custom parameters.
+
+    p2p = get_connection()
+    
+    htmlstory_data = {
+        'slug': "la-test-htmlstory-20160121",
+        'body': "Lorem ipsum dolor...",
+        'title': "Test HTML Story",
+        'content_item_state_code': "working",
+        'content_item_type_code': 'htmlstory',
+        'custom_param_data': {
+            'htmlstory-rhs-column-ad-enable': 'true', # Disable the right ad rail on html stories
+            'htmlstory-headline-enable': 'false', # Disable the display of the headline
+            'htmlstory-top-leaderboard-enable': 'false', # Disable the top ad leaderboard
+            'disable-publication-date': 'true', # Disable the display of the publication date
+            'disable-dateline': 'true', # Disable the display of the dateline
+            'comments-panel-title': 'Comment on this article', # Change the title of the comments panel
+        }
+    }
+
+    p2p.update_content_item(htmlstory_data)
+
+Some documentation for the P2P API can be found [here](http://content-api.p2p.tribuneinteractive.com/docs/content_items).
