@@ -45,12 +45,13 @@ This is an example call to create a content item. It is using all of the known c
         'content_item_state_code': "working",
         'content_item_type_code': 'htmlstory',
         'custom_param_data': {
-            'htmlstory-rhs-column-ad-enable': 'true', # Disable the right ad rail on html stories
-            'htmlstory-headline-enable': 'false', # Disable the display of the headline
-            'htmlstory-top-leaderboard-enable': 'false', # Disable the top ad leaderboard
-            'disable-publication-date': 'true', # Disable the display of the publication date
-            'disable-dateline': 'true', # Disable the display of the dateline
-            'comments-panel-title': 'Comment on this article', # Change the title of the comments panel
+            'htmlstory-rhs-column-ad-enable': 'true', # Default `true` enables the right ad rail on html stories.
+            'htmlstory-top-leaderboard-enable': 'true', # Default `true` enables the top ad leaderboard to display on html stories.`
+            'htmlstory-headline-enable': 'true', # Default `true` enables the headline to display on html stories.
+            'htmlstory-byline-enable': 'true', # Default `true` enables the byline to display on html stories. 
+            'disable-publication-date': 'true', # Default `true` enables the display time to display on html stories. 
+            'disable-dateline': 'false', # Default `false` keeps the dateline visible on content items
+            'comments-panel-title': 'Comment on this article', # A string that modifies the title of the comments panel
         }
     }
 
