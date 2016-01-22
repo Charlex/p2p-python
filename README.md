@@ -49,7 +49,7 @@ This is an example call to create a content item. It is using all of the known c
             'htmlstory-top-leaderboard-enable': 'true', # Default `true` enables the top ad leaderboard to display on html stories.`
             'htmlstory-headline-enable': 'true', # Default `true` enables the headline to display on html stories.
             'htmlstory-byline-enable': 'true', # Default `true` enables the byline to display on html stories. 
-            'disable-publication-date': 'true', # Default `true` enables the display time to display on html stories. 
+            'disable-publication-date': 'false', # Default `false` enables the display time to display on html stories. 
             'disable-dateline': 'false', # Default `false` keeps the dateline visible on content items
             'comments-panel-title': 'Comment on this article', # A string that modifies the title of the comments panel
         }
