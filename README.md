@@ -10,7 +10,7 @@ Configuration settings. Set these values in your environment or your Django sett
 
     # Optional
     P2P_IMAGE_SERVICES_URL = url_of_image_services_endpoint
-  
+
 To get a connection object based on these settings:
 
     from p2p import get_connection
@@ -27,6 +27,22 @@ Or you can create a connection object manually. You'll want to do this in order 
         cache=cache.DictionaryCache(),
         preserve_embedded_tags=False or True
     )
+
+By default `create_content_item` and `update_content_item` will encode the content item's title and body for p2p's latin-1 database. This can be overridden to disable the encoding like so:
+
+    p2p.create_content_item({
+        "slug": "la-test-hello-world"
+        "title": "Hello world",
+        "body": "My safe content."
+    }, encoded_fields=())
+
+Or it can be applied to more fields:
+
+    p2p.create_content_item({
+        "slug": "la-test-hello-world"
+        "title": "Hello world",
+        "body": "My safe content."
+    }, encoded_fields=("title", "body", "seodescription"))
 
 To run tests:
 
