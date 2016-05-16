@@ -282,7 +282,7 @@ class P2P(object):
 
         return ret
 
-    def update_content_item(self, content_item, slug=None):
+    def update_content_item(self, content_item, slug=None, encoded_fields=("title", "body")):
         """
         Update a content item.
 
@@ -303,6 +303,11 @@ class P2P(object):
             content.pop("web_url")
         except KeyError:
             pass
+
+        # Encode each field marked in encoded_fields
+        for field in encoded_fields:
+            if field in content:
+                content[field] = utils.encode_for_p2p(content[field])
 
         d = {'content_item': content}
 
@@ -400,7 +405,7 @@ class P2P(object):
         except NotImplementedError:
             pass
 
-    def create_content_item(self, content_item):
+    def create_content_item(self, content_item, encoded_fields=("title", "body")):
         """
         Create a new content item.
 
@@ -428,7 +433,7 @@ class P2P(object):
             pass
         return True if "destroyed successfully" in result else False
 
-    def create_or_update_content_item(self, content_item):
+    def create_or_update_content_item(self, content_item, encoded_fields=("title", "body")):
         """
         Attempts to update a content item, if it doesn't exist, attempts to
         create it::
@@ -439,9 +444,9 @@ class P2P(object):
         """
         create = False
         try:
-            response = self.update_content_item(content_item)
+            response = self.update_content_item(content_item, encoded_fields)
         except P2PException:
-            response = self.create_content_item(content_item)
+            response = self.create_content_item(content_item, encoded_fields)
             create = True
 
         return (create, response)

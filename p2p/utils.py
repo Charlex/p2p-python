@@ -1,6 +1,7 @@
 import iso8601
 import re
 import pytz
+from bs4 import BeautifulSoup
 from datetime import datetime
 from dateutil.parser import parse
 
@@ -114,3 +115,12 @@ def parsedate(d):
         return iso8601.parse_date(d).replace(tzinfo=pytz.utc)
     else:
         return parse(d)
+
+def encode_for_p2p(html):
+    """
+    This helper function returns a latin-1 compliant unicode string to
+    avoid exceptions and upside down question marks in p2p.
+    """
+    soup = BeautifulSoup(html, 'html.parser')
+    converted_str = soup.encode("latin-1", "xmlcharrefreplace")
+    return unicode(converted_str, "latin-1")

@@ -1,6 +1,9 @@
+# -*- coding: utf-8 -*-
+
 import pprint
 import unittest
-from p2p import get_connection, P2PNotFound, P2PSlugTaken, filters
+from bs4 import BeautifulSoup
+from p2p import get_connection, P2PNotFound, P2PSlugTaken, filters, utils
 pp = pprint.PrettyPrinter(indent=4)
 
 
@@ -50,6 +53,10 @@ class TestP2P(unittest.TestCase):
         for k in self.content_item_keys:
             self.assertIn(k, data.keys())
         # HTML story
+        try:
+            data = self.p2p.get_content_item(self.htmlstory_slug)
+        except P2PSlugTaken:
+            pass
         data = self.p2p.get_content_item(self.htmlstory_slug)
 
     def test_create_update_delete_content_item(self):
@@ -58,6 +65,7 @@ class TestP2P(unittest.TestCase):
             'title': 'Testing creating, updating and deletion',
             'body': 'lorem ipsum',
             'content_item_type_code': 'story',
+            'content_item_state_code': 'working'
         }
 
         try:
@@ -86,6 +94,7 @@ class TestP2P(unittest.TestCase):
             'title': 'Testing creating, updating and deletion',
             'body': 'lorem ipsum',
             'content_item_type_code': 'htmlstory',
+            'content_item_state_code': 'working'
         }
 
         try:
@@ -117,6 +126,7 @@ class TestP2P(unittest.TestCase):
             'title': 'Testing creating, updating and deletion',
             'body': 'lorem ipsum',
             'content_item_type_code': 'htmlstory',
+            'content_item_state_code': 'working'
         }
 
         try:
@@ -134,6 +144,7 @@ class TestP2P(unittest.TestCase):
             'title': 'Testing creating, updating and deletion',
             'body': 'lorem ipsum',
             'content_item_type_code': 'htmlstory',
+            'content_item_state_code': 'working'
         }
 
         try:
@@ -151,6 +162,7 @@ class TestP2P(unittest.TestCase):
             'title': 'Testing updating collections in content items',
             'body': 'lorem ipsum',
             'content_item_type_code': 'story',
+            'content_item_state_code': 'working'
         }
 
         try:
@@ -304,12 +316,14 @@ class TestWorkflows(unittest.TestCase):
             'byline': 'By Bobby Tables',
             'body': 'lorem ipsum',
             'content_item_type_code': 'story',
+            'content_item_state_code': 'working'
         }
         photo_data = {
             'slug': 'la_na_test_create_update_delete_photo',
             'title': 'Photo: Testing creating, updating and deletion',
             'caption': 'lorem ipsum',
             'content_item_type_code': 'photo',
+            'content_item_state_code': 'working',
             'photo_upload': {
                 'alt_thumbnail': {
                     'url': 'http://media.apps.chicagotribune.com/api_test.jpg'
@@ -578,3 +592,132 @@ class TestFilters(unittest.TestCase):
         self.assertEqual(
             filters.strip_tags('<p>foo</p> <p><b>head</b></p> <p>foo</p>'),
             'foo head foo')
+
+class P2PEncodingTest(unittest.TestCase):
+    """
+    Test utils.encode_for_p2p() to make sure there are no upside down
+    question marks being passed in or out.
+    """
+    complex_html = "<header>Testing</header><div class='container'>%s</div>"
+    test_slug = "la-test-unit-test"
+    TEST_STRINGS = (
+        ("é", u"\xe9"),
+        ("à", u"\xe0"),
+        ("©", u"\xa9"),
+        ("“", u"&#8220;"),
+        ("•", u"&#8226;"),
+        ("€", u"&#8364;"),
+        ("…", u"&#8230;"),
+        ("👌", u"&#128076;"),
+        ("🍔", u"&#127828;"),
+        ("测", u"&#27979;"),
+        ("试", u"&#35797;"),
+        ("д", u"&#1076;"),
+        ("Ӂ", u"&#1217;"),
+        (
+            "ا",
+            u"&#1575;"
+        )
+    )
+    TEST_STRING = ''.join('%s' % input_str for input_str, output_str in TEST_STRINGS)
+
+    def setUp(self):
+        """
+        Open a connection to p2p.
+        """
+        self.p2p = get_connection()
+        payload = {
+            "slug": self.test_slug,
+            "title": self.TEST_STRING,
+        }
+
+        try:
+            self.p2p.create_content_item(payload)
+        except P2PSlugTaken:
+            pass
+
+    def test_non_ascii_characters(self):
+        """
+        Loop through a bunch of non-ascii characters and make sure our clean
+        method returns their html entity.
+        """
+        for input_string, output_string in self.TEST_STRINGS:
+            self.assertTrue(output_string in utils.encode_for_p2p(input_string))
+
+    def test_complex_html(self):
+        """
+        Plug some semi-complicated html into our utils.encode_for_p2p method to
+        make sure it can handle.
+        """
+
+        # Test smart double quotes
+        curly_double_quotes_html = utils.encode_for_p2p(
+            self.complex_html % "“This is encased in smart double quotes”"
+        )
+        self.assertTrue("&#8220;" in curly_double_quotes_html)
+        self.assertTrue("&#8221;" in curly_double_quotes_html)
+
+        # Test smart single quotes
+        curly_single_quotes_html = utils.encode_for_p2p(
+            self.complex_html % "‘This is encased in smart single quotes’"
+        )
+        self.assertTrue("&#8216;" in curly_single_quotes_html)
+        self.assertTrue("&#8217;" in curly_single_quotes_html)
+
+    def test_arabic_strings(self):
+        """
+        Since Arabic words have a bunch of characters in each word, this test
+        chugs through each character to make sure it was converted properly.
+        """
+        # Test Arabic characters
+        html_entities_to_expect = ["&#1575;", "&#1582;", "&#1578;", "&#1576;", \
+"&#1575;", "&#1585;", "&#1608;", "&#1581;", "&#1583;", "&#1577;"]
+        cleaned_arabic = utils.encode_for_p2p("اختبار وحدة")
+
+        # Loop through the characters to make sure our clean method is working
+        for character in html_entities_to_expect:
+            self.assertTrue(character in cleaned_arabic)
+
+    def test_sending_bad_data_to_p2p(self):
+        """
+        Make sure there ARE upside down question marks instead of the special
+        symbols we tried passing in without our utils.encode_for_p2p() method.
+
+        If this test ever fails, we'll know the p2p team fixed the bug... and
+        that pigs have started to sprout wings.
+        """
+        payload = {
+            "slug": self.test_slug,
+            "title": "Mÿ tèst hœdlÏne™¢£™¡¶º¶∞Å",
+            "body": self.complex_html % "–•“”—¢£™¡¶º¶∞Å 测试 👌",
+            "seodescription": "–•“”—¢£™¡¢£™¡¶º¶∞Å",
+            "content_item_type_code": "htmlstory"
+        }
+        try:
+            self.p2p.create_content_item(payload, encoded_fields=())
+        except P2PSlugTaken:
+            pass
+        self.p2p.update_content_item(payload, encoded_fields=())
+        ci = self.p2p.get_content_item(self.test_slug)
+
+        self.assertTrue(u"¿" in ci["body"])
+
+    def test_sending_cleaned_data_to_p2p(self):
+        """
+        Make sure there are NO upside down question marks in place of our
+        special symbols.
+        """
+        payload = {
+            "slug": self.test_slug,
+            "title": self.TEST_STRING,
+            "body": self.complex_html % self.TEST_STRING,
+            "seodescription": self.TEST_STRING,
+            "content_item_type_code": "htmlstory"
+        }
+        self.p2p.update_content_item(payload)
+        ci = self.p2p.get_content_item(self.test_slug)
+
+        self.assertFalse(u"¿" in ci["body"])
+        # Make sure each of our test strings are in the response
+        for input_string, output_string in self.TEST_STRINGS:
+            self.assertTrue(output_string in ci["body"])
