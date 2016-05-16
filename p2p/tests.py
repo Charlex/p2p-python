@@ -771,10 +771,10 @@ class P2PEncodingTest(unittest.TestCase):
             "content_item_type_code": "htmlstory"
         }
         try:
-            self.p2p.create_content_item(payload, encoded_fields=())
+            self.p2p.create_content_item(payload, encoded_fields=None)
         except P2PSlugTaken:
             pass
-        self.p2p.update_content_item(payload, encoded_fields=())
+        self.p2p.update_content_item(payload, encoded_fields=None)
         ci = self.p2p.get_content_item(self.test_slug)
 
         self.assertTrue(u"¿" in ci["body"])

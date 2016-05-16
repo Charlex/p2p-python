@@ -318,9 +318,10 @@ class P2P(object):
 
         # Encode each field marked in encoded_fields to be compatible with
         # p2p's latin-1 database
-        for field in encoded_fields:
-            if field in content:
-                content[field] = utils.encode_for_p2p(content[field])
+        if encoded_fields:
+            for field in encoded_fields:
+                if field in content:
+                    content[field] = utils.encode_for_p2p(content[field])
 
         d = {'content_item': content}
 
@@ -440,9 +441,10 @@ class P2P(object):
 
         # Encode each field marked in encoded_fields to be compatible with
         # p2p's latin-1 database
-        for field in encoded_fields:
-            if field in content:
-                content[field] = utils.encode_for_p2p(content[field])
+        if encoded_fields:
+            for field in encoded_fields:
+                if field in content:
+                    content[field] = utils.encode_for_p2p(content[field])
 
         url = '/content_items.json'
         if not self.preserve_embedded_tags:

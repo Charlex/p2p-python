@@ -34,7 +34,7 @@ By default `create_content_item` and `update_content_item` will encode the conte
         "slug": "la-test-hello-world"
         "title": "Hello world",
         "body": "My safe content."
-    }, encoded_fields=())
+    }, encoded_fields=None)
 
 Or it can be applied to more fields:
 
