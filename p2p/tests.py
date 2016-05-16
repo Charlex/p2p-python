@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
+import os
 import pprint
 import unittest
 from bs4 import BeautifulSoup
-from p2p import get_connection, P2PNotFound, P2PSlugTaken, filters, utils
+from p2p import get_connection, P2PNotFound, P2PSlugTaken, filters, P2P, utils
 pp = pprint.PrettyPrinter(indent=4)
 
 
@@ -14,6 +15,7 @@ class TestP2P(unittest.TestCase):
         self.htmlstory_slug = 'la-ben-s-api-test-20150730'
         self.collection_slug = 'la_na_lorem'
         self.second_collection_slug = 'la_na_lorem_ispum'
+        self.photo_slug = 'la-test-photo'
 
         self.p2p = get_connection()
         self.p2p.debug = True
@@ -59,11 +61,46 @@ class TestP2P(unittest.TestCase):
             pass
         data = self.p2p.get_content_item(self.htmlstory_slug)
 
+    def test_related_items(self):
+        # Add
+        self.p2p.push_into_content_item(
+            self.htmlstory_slug, [self.content_item_slug])
+        data = self.p2p.get_content_item(self.htmlstory_slug)
+        self.assertEqual(len(data["related_items"]), 1)
+        # Remove
+        self.p2p.remove_from_content_item(
+            self.htmlstory_slug, [self.content_item_slug])
+        data = self.p2p.get_content_item(self.htmlstory_slug)
+        self.assertEqual(len(data["related_items"]), 0)
+
+    def test_embedded_items(self):
+        # Add
+        self.p2p.push_embed_into_content_item(
+            self.htmlstory_slug,
+            [self.content_item_slug],
+            size="S"
+        )
+        data = self.p2p.get_content_item(self.htmlstory_slug)
+        self.assertEqual(len(data["embedded_items"]), 1)
+        self.p2p.push_embed_into_content_item(
+            self.htmlstory_slug,
+            [dict(slug=self.photo_slug, size='J'),]
+        )
+        data = self.p2p.get_content_item(self.htmlstory_slug)
+        self.assertEqual(len(data["embedded_items"]), 2)
+        # Remove
+        self.p2p.remove_embed_from_content_item(
+            self.htmlstory_slug,
+            [self.content_item_slug, self.photo_slug]
+        )
+        data = self.p2p.get_content_item(self.htmlstory_slug)
+        self.assertEqual(len(data["embedded_items"]), 0)
+
     def test_create_update_delete_content_item(self):
         data = {
             'slug': 'la_na_test_create_update_delete',
             'title': 'Testing creating, updating and deletion',
-            'body': 'lorem ipsum',
+            'body': 'Updated info',
             'content_item_type_code': 'story',
             'content_item_state_code': 'working'
         }
@@ -92,7 +129,7 @@ class TestP2P(unittest.TestCase):
         data = {
             'slug': 'la_na_test_create_update_delete-htmlstory',
             'title': 'Testing creating, updating and deletion',
-            'body': 'lorem ipsum',
+            'body': 'Updated info 2',
             'content_item_type_code': 'htmlstory',
             'content_item_state_code': 'working'
         }
@@ -104,9 +141,45 @@ class TestP2P(unittest.TestCase):
             result = self.p2p.create_content_item(data)
 
         data2 = data.copy()
-        data2['body'] = 'Lorem ipsum foo bar'
+        data2['body'] = 'Lorem ipsum foo bar 2'
         result2 = self.p2p.update_content_item(data2)
         self.assertTrue(self.p2p.delete_content_item(data['slug']))
+
+        self.assertIn(
+            'html_story',
+            result.keys()
+        )
+        res = result['html_story']
+        self.assertEqual(res['slug'], data['slug'])
+        self.assertEqual(res['title'], data['title'])
+        self.assertEqual(res['body'].strip(), data['body'])
+
+        res = result2
+        self.assertEqual(res, {})
+
+    def test_preserve_embedded_tags(self):
+        data = {
+            'slug': 'la_na_test_create_update_delete-htmlstory',
+            'title': 'Testing creating, updating and deletion',
+            'body': 'lorem ipsum 3',
+            'content_item_type_code': 'htmlstory',
+        }
+
+        conn = P2P(
+            auth_token=os.environ['P2P_API_KEY'],
+            preserve_embedded_tags=False
+        )
+
+        try:
+            result = conn.create_content_item(data)
+        except P2PSlugTaken:
+            conn.delete_content_item(data['slug'])
+            result = conn.create_content_item(data)
+
+        data2 = data.copy()
+        data2['body'] = 'Lorem ipsum foo bar'
+        result2 = conn.update_content_item(data2)
+        self.assertTrue(conn.delete_content_item(data['slug']))
 
         self.assertIn(
             'html_story',
@@ -124,7 +197,7 @@ class TestP2P(unittest.TestCase):
         data = {
             'slug': 'la_na_test_create_update_delete-htmlstory',
             'title': 'Testing creating, updating and deletion',
-            'body': 'lorem ipsum',
+            'body': 'lorem ipsum 4',
             'content_item_type_code': 'htmlstory',
             'content_item_state_code': 'working'
         }
@@ -137,12 +210,13 @@ class TestP2P(unittest.TestCase):
 
         self.p2p.hide_right_rail(result['slug'])
         self.p2p.show_right_rail(result['slug'])
+        self.assertTrue(self.p2p.delete_content_item(data['slug']))
 
     def test_robots(self):
         data = {
             'slug': 'la_na_test_create_update_delete-htmlstory',
             'title': 'Testing creating, updating and deletion',
-            'body': 'lorem ipsum',
+            'body': 'lorem ipsum 5',
             'content_item_type_code': 'htmlstory',
             'content_item_state_code': 'working'
         }
@@ -155,12 +229,13 @@ class TestP2P(unittest.TestCase):
 
         self.p2p.hide_to_robots(result['slug'])
         self.p2p.show_to_robots(result['slug'])
+        self.assertTrue(self.p2p.delete_content_item(data['slug']))
 
     def test_push_item_into_two_collections(self):
         data = {
             'slug': 'la_na_test_two_collections',
             'title': 'Testing updating collections in content items',
-            'body': 'lorem ipsum',
+            'body': 'lorem ipsum 6',
             'content_item_type_code': 'story',
             'content_item_state_code': 'working'
         }
@@ -314,14 +389,14 @@ class TestWorkflows(unittest.TestCase):
             'slug': 'la_na_test_create_update_delete',
             'title': 'Testing creating, updating and deletion',
             'byline': 'By Bobby Tables',
-            'body': 'lorem ipsum',
+            'body': 'lorem ipsum 7',
             'content_item_type_code': 'story',
             'content_item_state_code': 'working'
         }
         photo_data = {
             'slug': 'la_na_test_create_update_delete_photo',
             'title': 'Photo: Testing creating, updating and deletion',
-            'caption': 'lorem ipsum',
+            'caption': 'lorem ipsum 8',
             'content_item_type_code': 'photo',
             'content_item_state_code': 'working',
             'photo_upload': {
@@ -597,6 +672,8 @@ class P2PEncodingTest(unittest.TestCase):
     """
     Test utils.encode_for_p2p() to make sure there are no upside down
     question marks being passed in or out.
+
+    Blame @charlex for this test case.
     """
     complex_html = "<header>Testing</header><div class='container'>%s</div>"
     test_slug = "la-test-unit-test"

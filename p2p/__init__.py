@@ -19,7 +19,8 @@ from .errors import (
     P2PForbidden,
     P2PEncodingMismatch,
     P2PUnknownAttribute,
-    P2PInvalidAccessDefinition
+    P2PInvalidAccessDefinition,
+    P2PSearchError
 )
 log = logging.getLogger('p2p')
 
@@ -57,6 +58,11 @@ def get_connection():
             url=settings.P2P_API_URL,
             auth_token=settings.P2P_API_KEY,
             debug=settings.DEBUG,
+            preserve_embedded_tags=getattr(
+                settings,
+                'P2P_PRESERVE_EMBEDDED_TAGS',
+                True
+            ),
             image_services_url=getattr(
                 settings,
                 'P2P_IMAGE_SERVICES_URL',
@@ -69,6 +75,10 @@ def get_connection():
             kwargs = dict(
                 auth_token=os.environ['P2P_API_KEY'],
                 debug=os.environ.get('P2P_API_DEBUG', False),
+                preserve_embedded_tags=os.environ.get(
+                    'P2P_PRESERVE_EMBEDDED_TAGS',
+                    True
+                ),
                 image_services_url=os.environ.get(
                     'P2P_IMAGE_SERVICES_URL',
                     None
@@ -116,7 +126,8 @@ class P2P(object):
         product_affiliate_code='lanews',
         source_code='latimes',
         webapp_name='tRibbit',
-        state_filter='live'
+        state_filter='working,live,pending,copyready',
+        preserve_embedded_tags=True
     ):
         self.config = {
             'P2P_API_ROOT': url,
@@ -129,6 +140,7 @@ class P2P(object):
         self.source_code = source_code
         self.webapp_name = webapp_name
         self.state_filter = state_filter
+        self.preserve_embedded_tags = preserve_embedded_tags
 
         self.default_filter = {
             'product_affiliate': self.product_affiliate_code,
@@ -304,18 +316,26 @@ class P2P(object):
         except KeyError:
             pass
 
-        # Encode each field marked in encoded_fields
+        # Encode each field marked in encoded_fields to be compatible with
+        # p2p's latin-1 database
         for field in encoded_fields:
             if field in content:
                 content[field] = utils.encode_for_p2p(content[field])
 
         d = {'content_item': content}
 
-        resp = self.put_json("/content_items/%s.json" % slug, d)
+        url = "/content_items/%s.json"
+        url = url % slug
+        if not self.preserve_embedded_tags:
+            url += "?preserve_embedded_tags=false"
+
+        resp = self.put_json(url, d)
+
         try:
             self.cache.remove_content_item(slug)
         except NotImplementedError:
             pass
+
         return resp
 
     def hide_right_rail(self, slug):
@@ -418,7 +438,17 @@ class P2P(object):
         defaults.update(content)
         data = {'content_item': defaults}
 
-        resp = self.post_json('/content_items.json', data)
+        # Encode each field marked in encoded_fields to be compatible with
+        # p2p's latin-1 database
+        for field in encoded_fields:
+            if field in content:
+                content[field] = utils.encode_for_p2p(content[field])
+
+        url = '/content_items.json'
+        if not self.preserve_embedded_tags:
+            url += "?preserve_embedded_tags=false"
+
+        resp = self.post_json(url, data)
         return resp
 
     def delete_content_item(self, slug):
@@ -631,6 +661,79 @@ class P2P(object):
         """
         ret = self.put_json(
             '/content_items/prepend_related_items.json?id=%s' % slug,
+            {'items': content_item_slugs})
+        try:
+            self.cache.remove_content_item(slug)
+        except NotImplementedError:
+            pass
+        return ret
+
+    def push_embed_into_content_item(self, slug, content_item_slugs, size="S"):
+        """
+        Push a list of content item slugs into embedded items list
+
+        Accepts a list of slugs and an optional size, which will be applied to
+        all embeds.
+
+            client.push_embed_into_content_item(['slug-1', 'slug-2', 'slug-3'])
+
+            client.push_embed_into_content_item(['slug-1', 'slug-2', 'slug-3'], size='L')
+
+        Also accepts a list of dictionaries that provide a slug and custom size
+        for each embed.
+
+            client.push_embed_into_content_item([
+                dict(slug='slug-1', size='S'),
+                dict(slug='slug-2', size='L'),
+                dict(slug='slug-3', size='L'),
+            ])
+        """
+
+        items = []
+        for i, ci in enumerate(content_item_slugs):
+            if isinstance(ci, str):
+                d = dict(slug=ci, contentitem_size=size, position=i)
+                items.append(d)
+            elif isinstance(ci, dict):
+                d = dict(
+                    slug=ci['slug'],
+                    contentitem_size=ci.get('size', size),
+                    position=i
+                )
+                items.append(d)
+            else:
+                raise ValueError("content_item_slugs are bad data")
+        ret = self.put_json(
+            '/content_items/append_embedded_items.json?id=%s' % slug,
+            {'items': items }
+        )
+        try:
+            self.cache.remove_content_item(slug)
+        except NotImplementedError:
+            pass
+        return ret
+
+    def remove_from_content_item(self, slug, content_item_slugs):
+        """
+        Removes related items from a content item, accepts slug of content item
+        and list of one or more related item slugs
+        """
+        ret = self.put_json(
+            '/content_items/remove_related_items.json?id=%s' % slug,
+            {'items': content_item_slugs})
+        try:
+            self.cache.remove_content_item(slug)
+        except NotImplementedError:
+            pass
+        return ret
+
+    def remove_embed_from_content_item(self, slug, content_item_slugs):
+        """
+        Removes embed items from a content item, accepts slug of content item
+        and list of one or more related item slugs
+        """
+        ret = self.put_json(
+            '/content_items/remove_embedded_items.json?id=%s' % slug,
             {'items': content_item_slugs})
         try:
             self.cache.remove_content_item(slug)
@@ -852,7 +955,9 @@ class P2P(object):
         Get information on how to display images associated with this slug
         """
         url = "%s/photos/turbine/%s.json" % (
-            self.config['IMAGE_SERVICES_URL'], slug)
+            self.config['IMAGE_SERVICES_URL'],
+            slug
+        )
 
         thumb = None
 
@@ -929,16 +1034,13 @@ class P2P(object):
     # Utilities
     def http_headers(self, content_type=None, if_modified_since=None):
         h = {'Authorization': 'Bearer %(P2P_API_KEY)s' % self.config}
-
         if content_type is not None:
             h['content-type'] = content_type
-
         if type(if_modified_since) == datetime:
             h['If-Modified-Since'] = format_date_time(
                 mktime(if_modified_since.utctimetuple()))
         elif if_modified_since is not None:
             h['If-Modified-Since'] = if_modified_since
-
         return h
 
     def _check_for_errors(self, resp, req_url):
@@ -965,6 +1067,8 @@ class P2P(object):
                     raise P2PUnknownAttribute(resp.url, request_log)
                 elif u"Invalid access definition" in resp.content:
                     raise P2PInvalidAccessDefinition(resp.url, request_log)
+                elif u"solr.tila.trb" in resp.content:
+                    raise P2PSearchError(resp.url, request_log)
                 data = resp.json()
                 if 'errors' in data:
                     raise P2PException(data['errors'][0], request_log)
@@ -1026,7 +1130,8 @@ class P2P(object):
             self.config['P2P_API_ROOT'] + url,
             data=payload,
             headers=self.http_headers('application/json'),
-            verify=False)
+            verify=False
+        )
 
         resp_log = self._check_for_errors(resp, url)
 
