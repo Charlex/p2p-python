@@ -47,7 +47,7 @@ Or it can be expanded to apply to more fields:
     p2p.create_content_item({
         "slug": "la-test-hello-world"
         "title": "Hello world",
-        "body": "My non latin-1 content 🍔 试 ©."
+        "body": "My non-latin-1 content 🍔 试 ©."
     }, encoded_fields=("title", "body", "seodescription"))
 
 ### Testing
