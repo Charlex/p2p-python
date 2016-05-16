@@ -50,7 +50,7 @@ Or it can be expanded to apply to more fields:
         "body": "My non latin-1 content 🍔 试 ©."
     }, encoded_fields=("title", "body", "seodescription"))
 
-### Encoding
+### Testing
 
 To run tests:
 
