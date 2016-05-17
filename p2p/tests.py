@@ -1,7 +1,14 @@
 import os
 import pprint
 import unittest
-from p2p import get_connection, P2PNotFound, P2PSlugTaken, filters, P2P
+from p2p import (
+    P2P,
+    filters,
+    P2PNotFound,
+    P2PSlugTaken,
+    get_connection,
+    P2PImageUploadFailure,
+)
 pp = pprint.PrettyPrinter(indent=4)
 
 
@@ -357,6 +364,45 @@ class TestP2P(unittest.TestCase):
             data,
             "Collection 'la_test_api_create' destroyed successfully"
         )
+
+    def test_image_upload_failure_exception(self):
+        """
+        Sometimes P2P doesn't like certain image URLs. This tests the custom
+        exception to the 500 error the API returns.
+        """
+        TEST_IMAGE_URLS = (
+            # ("image_url", Boolean: Will P2P successfully upload this image?)
+            ("http://www.deism.com/images/Einstein_laughing.jpeg", False),
+            ("http://www.trbimg.com/img-57363280/turbine/la-1463169770-snap-photo/650/650x366", False),
+            ("http://i.imgur.com/EZQ3jQ0.jpg", False)
+        )
+        payload = {
+            'slug': 'la-test-unit-test',
+            'title': 'Testing image upload failure',
+            'body': 'lorem ipsum 7',
+            'content_item_type_code': 'story',
+            'content_item_state_code': 'working',
+            'photo_upload': {
+                'alt_thumbnail': {
+                    'url': None
+                }
+            },
+        }
+
+        try:
+            data = self.p2p.create_content_item(payload)
+        except P2PSlugTaken:
+            pass
+
+        for image_url, success_expected in TEST_IMAGE_URLS:
+            payload["photo_upload"]["alt_thumbnail"]["url"] = image_url
+
+            if success_expected:
+                self.p2p.update_content_item(payload)
+            else:
+                with self.assertRaises(P2PImageUploadFailure):
+                    self.p2p.update_content_item(payload)
+
 
 
 class TestWorkflows(unittest.TestCase):

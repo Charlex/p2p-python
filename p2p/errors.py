@@ -32,3 +32,7 @@ class P2PInvalidAccessDefinition(P2PException):
 
 class P2PSearchError(P2PException):
     pass
+
+
+class P2PImageUploadFailure(P2PException):
+    pass
