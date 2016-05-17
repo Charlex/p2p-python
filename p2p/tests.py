@@ -374,7 +374,8 @@ class TestP2P(unittest.TestCase):
             # ("image_url", Boolean: Will P2P successfully upload this image?)
             ("http://www.deism.com/images/Einstein_laughing.jpeg", False),
             ("http://www.trbimg.com/img-57363280/turbine/la-1463169770-snap-photo/650/650x366", False),
-            ("http://i.imgur.com/EZQ3jQ0.jpg", False)
+            ("http://i.imgur.com/EZQ3jQ0.jpg", False),
+            ("http://www.trbimg.tribstage.com/img-54c9e759/turbine/la-fi-himi-jones-20120729/650/650x650", True)
         )
         payload = {
             'slug': 'la-test-unit-test',
