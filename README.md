@@ -5,12 +5,12 @@ Configuration settings. Set these values in your environment or your Django sett
 
     P2P_API_KEY = your_p2p_api_key
     P2P_API_URL = url_of_p2p_endpoint
-    P2P_API_DEBUG = plz  # display an http log
+    P2P_API_DEBUG = True  # display an http log
     P2P_PRESERVE_EMBEDDED_TAGS = False # set to false to fix encoding issues with special characters
 
     # Optional
     P2P_IMAGE_SERVICES_URL = url_of_image_services_endpoint
-  
+
 To get a connection object based on these settings:
 
     from p2p import get_connection

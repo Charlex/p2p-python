@@ -2,6 +2,20 @@ class P2PException(Exception):
     pass
 
 
+class P2PUnprocessableEntity(P2PException):
+    """
+    For generic 422 errors.
+    """
+    pass
+
+
+class P2PSlugIsAlreadyLive(P2PException):
+    """
+    For "The slug may not be altered after the item has gone live." errors.
+    """
+    pass
+
+
 class P2PSlugTaken(P2PException):
     pass
 

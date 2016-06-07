@@ -13,6 +13,8 @@ from .adapters import TribAdapter
 from wsgiref.handlers import format_date_time
 from .errors import (
     P2PException,
+    P2PUnprocessableEntity,
+    P2PSlugIsAlreadyLive,
     P2PSlugTaken,
     P2PNotFound,
     P2PUniqueConstraintViolated,
@@ -38,14 +40,14 @@ def get_connection():
         export P2P_API_URL=url_of_p2p_endpoint
 
         # Optional
-        export P2P_API_DEBUG=plz  # display an http log
+        export P2P_API_DEBUG=True  # display an http log
         export P2P_IMAGE_SERVICES_URL=url_of_image_services_endpoint
 
     Or those same settings from your Django settings::
 
         P2P_API_KEY = your_p2p_api_key
         P2P_API_URL = url_of_p2p_endpoint
-        P2P_API_DEBUG = plz  # display an http log
+        P2P_API_DEBUG = True  # display an http log
 
         # Optional
         P2P_IMAGE_SERVICES_URL = url_of_image_services_endpoint
@@ -1072,6 +1074,11 @@ class P2P(object):
             resp.raise_for_status()
         elif resp.status_code == 404:
             raise P2PNotFound(resp.url, request_log)
+        elif resp.status_code == 422:
+            if u'"The slug may not be altered after the item has gone live."' in resp.content:
+                raise P2PSlugIsAlreadyLive(resp.url, request_log)
+            else:
+                raise P2PUnprocessableEntity(resp.url, request_log)
         elif resp.status_code >= 400:
             if u'{"slug":["has already been taken"]}' in resp.content:
                 raise P2PSlugTaken(resp.url, request_log)
