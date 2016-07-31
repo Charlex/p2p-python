@@ -962,7 +962,7 @@ class P2P(object):
             resp = self.s.get(
                 url,
                 headers=self.http_headers(),
-                verify=False)
+                verify=True)
             if resp.ok:
                 thumb = resp.json()
                 self.cache.save_thumb(thumb)
@@ -973,7 +973,7 @@ class P2P(object):
                 resp = self.s.get(
                     url,
                     headers=self.http_headers(),
-                    verify=False)
+                    verify=True)
                 if resp.ok:
                     thumb = resp.json()
                     self.cache.save_thumb(thumb)
@@ -1040,6 +1040,9 @@ class P2P(object):
         return h
 
     def _check_for_errors(self, resp, req_url):
+        """
+        Scan the response for API errors and raise found exceptions.
+        """
         request_log = {
             'REQ_URL': req_url,
             'REQ_HEADERS': self.http_headers(),
@@ -1096,77 +1099,91 @@ class P2P(object):
             raise P2PException(resp.content, request_log)
         return request_log
 
+    def _get_parsed_response(self, response):
+        """
+        Provides a standard parsing method for get(), delete(), post_json()
+        and put_json(). The intent of this helper was to uniform the parsing
+        across the 4 request methods and to avoid repeating ourselves.
+
+        It logs a curl for debugging, checks for errors, checks for empty
+        responses and for failed JSON parsing.
+        """
+        # Log the curl
+        log.debug("[P2P][CURL] %s" %
+            utils.request_to_curl(response.request))
+
+        # Check for errors and throw exceptions if needed
+        error_log = self._check_for_errors(response, response.url)
+
+        # If P2P responds with empty content and a 1xx, 2xx, or 3xx status
+        # code, return a simple object
+        if response.content == "" and response.status_code < 400:
+            return {}
+
+        # If P2P responds with content, attempt to return parsed JSON
+        try:
+            parsed_response = utils.parse_response(response.json())
+
+            # If an ETag is included, place it in the response
+            # (Note: presumably used in a caching mechanism, but
+            # I am unclear if this is still needed. -Charley)
+            if 'ETag' in response.headers:
+                parsed_response['etag'] = response.headers['ETag']
+
+            return parsed_response
+        except Exception:
+            log.error('[p2p][put_json] JSON parse failed: %s' % error_log)
+            raise
+
+
     @retry(P2PRetryableError)
     def get(self, url, query=None, if_modified_since=None):
+        # String together a dict to a querystring
         if query is not None:
             url += '?' + utils.dict_to_qs(query)
-        log.debug("GET: %s" % url)
+
+        # GET the request
         resp = self.s.get(
             self.config['P2P_API_ROOT'] + url,
             headers=self.http_headers(if_modified_since=if_modified_since),
             verify=False)
 
-        resp_log = self._check_for_errors(resp, url)
-        try:
-            ret = utils.parse_response(resp.json())
-            if 'ETag' in resp.headers:
-                ret['etag'] = resp.headers['ETag']
-            return ret
-        except ValueError:
-            log.error('JSON VALUE ERROR ON SUCCESSFUL RESPONSE %s' % resp_log)
-            raise
+        # Raise exceptions if needed and return a parsed response
+        return self._get_parsed_response(resp)
 
     @retry(P2PRetryableError)
     def delete(self, url):
-        log.debug("GET: %s" % url)
+        # DELETE the request
         resp = self.s.delete(
             self.config['P2P_API_ROOT'] + url,
             headers=self.http_headers(),
             verify=False)
 
-        self._check_for_errors(resp, url)
-        return utils.parse_response(resp.content)
+        # Raise exceptions if needed and return a parsed response
+        return self._get_parsed_response(resp)
 
     @retry(P2PRetryableError)
     def post_json(self, url, data):
-        payload = json.dumps(utils.parse_request(data))
-        log.debug("GET: %s" % url)
+        # POST the request
         resp = self.s.post(
             self.config['P2P_API_ROOT'] + url,
-            data=payload,
+            data=json.dumps(utils.parse_request(data)),
             headers=self.http_headers('application/json'),
             verify=False
         )
 
-        resp_log = self._check_for_errors(resp, url)
-
-        if resp.content == "" and resp.status_code < 400:
-            return {}
-        else:
-            try:
-                return utils.parse_response(resp.json())
-            except Exception:
-                log.error('EXCEPTION IN JSON PARSE: %s' % resp_log)
-                raise
+        # Raise exceptions if needed and return a parsed response
+        return self._get_parsed_response(resp)
 
     @retry(P2PRetryableError)
     def put_json(self, url, data):
-        payload = json.dumps(utils.parse_request(data))
+        # PUT the request
         resp = self.s.put(
             self.config['P2P_API_ROOT'] + url,
-            data=payload,
+            data=json.dumps(utils.parse_request(data)),
             headers=self.http_headers('application/json'),
             verify=False
         )
 
-        resp_log = self._check_for_errors(resp, url)
-
-        if resp.content == "" and resp.status_code < 400:
-            return {}
-        else:
-            try:
-                print resp.__dict__
-                return utils.parse_response(resp.json())
-            except Exception:
-                log.error('EXCEPTION IN JSON PARSE: %s' % resp_log)
-                raise
+        # Raise exceptions if needed and return a parsed response
+        return self._get_parsed_response(resp)

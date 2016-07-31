@@ -114,3 +114,22 @@ def parsedate(d):
         return iso8601.parse_date(d).replace(tzinfo=pytz.utc)
     else:
         return parse(d)
+
+def request_to_curl(request):
+    """
+    Converts a valid request
+    """
+    command = "curl -v -X {method} -H {headers} -d '{data}' '{uri}'"
+    method = request.method
+    uri = request.url
+    data = request.body
+
+    # If the authorization token is included in the
+    # headers, redact it so it doesn't end up in the logs
+    # if "Authorization" in request.headers:
+    #     request.headers["Authorization"] = "Bearer P2P_API_KEY_REDACTED"
+
+    headers = ['"{0}: {1}"'.format(k, v) for k, v in request.headers.items()]
+    headers = " -H ".join(headers)
+    curl = command.format(method=method, headers=headers, data=data, uri=uri)
+    return curl
