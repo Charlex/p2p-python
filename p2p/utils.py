@@ -119,7 +119,7 @@ def request_to_curl(request):
     """
     Converts a valid request
     """
-    command = "curl -v -X {method} -H {headers} -d '{data}' '{uri}'"
+    command = "curl -v -X{method} -H {headers} -d '{data}' '{uri}'"
     method = request.method
     uri = request.url
     data = request.body

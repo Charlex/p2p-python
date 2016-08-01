@@ -1127,8 +1127,8 @@ class P2P(object):
             # If an ETag is included, place it in the response
             # (Note: presumably used in a caching mechanism, but
             # I am unclear if this is still needed. -Charley)
-            if 'ETag' in response.headers:
-                parsed_response['etag'] = response.headers['ETag']
+            # if 'ETag' in response.headers:
+            #     parsed_response['etag'] = response.headers['ETag']
 
             return parsed_response
         except Exception:
@@ -1157,7 +1157,8 @@ class P2P(object):
         resp = self.s.delete(
             self.config['P2P_API_ROOT'] + url,
             headers=self.http_headers(),
-            verify=False)
+            verify=True
+        )
 
         # Raise exceptions if needed and return a parsed response
         return self._get_parsed_response(resp)
@@ -1169,7 +1170,7 @@ class P2P(object):
             self.config['P2P_API_ROOT'] + url,
             data=json.dumps(utils.parse_request(data)),
             headers=self.http_headers('application/json'),
-            verify=False
+            verify=True
         )
 
         # Raise exceptions if needed and return a parsed response
@@ -1182,7 +1183,7 @@ class P2P(object):
             self.config['P2P_API_ROOT'] + url,
             data=json.dumps(utils.parse_request(data)),
             headers=self.http_headers('application/json'),
-            verify=False
+            verify=True
         )
 
         # Raise exceptions if needed and return a parsed response
