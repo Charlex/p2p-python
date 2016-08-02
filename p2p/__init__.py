@@ -1128,7 +1128,6 @@ class P2P(object):
 
     @retry(P2PRetryableError)
     def delete(self, url):
-
         resp = self.s.delete(
             self.config['P2P_API_ROOT'] + url,
             headers=self.http_headers(),
