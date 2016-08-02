@@ -958,7 +958,7 @@ class P2P(object):
         thumb = None
 
         if force_update:
-            log.debug("GET: %s" % url)
+            log.debug("[P2P][GET] %s" % url)
             resp = self.s.get(
                 url,
                 headers=self.http_headers(),
@@ -969,7 +969,7 @@ class P2P(object):
         else:
             thumb = self.cache.get_thumb(slug)
             if not thumb:
-                log.debug("GET: %s" % url)
+                log.debug("[P2P][GET] %s" % url)
                 resp = self.s.get(
                     url,
                     headers=self.http_headers(),
@@ -1057,8 +1057,7 @@ class P2P(object):
         }
 
         if self.debug:
-            for k, v in request_log.items():
-                log.debug('%s: %s' % (k, v))
+            log.debug("[P2P][RESPONSE] %s" % resp_log)
 
         if resp.status_code >= 500:
             try:
@@ -1111,10 +1110,14 @@ class P2P(object):
         resp = self.s.get(
             self.config['P2P_API_ROOT'] + url,
             headers=self.http_headers(if_modified_since=if_modified_since),
-            verify=False)
+            verify=True)
 
-        # Log the curl
-        log.debug("[P2P][GET] %s" % utils.request_to_curl(resp.request))
+        # Log the request curl if debug is on
+        if self.debug:
+            log.debug("[P2P][GET] %s" % utils.request_to_curl(resp.request))
+        # If debug is off, store a light weight log
+        else:
+            log.debug("[P2P][GET] %s" % url)
 
         resp_log = self._check_for_errors(resp)
         try:
@@ -1131,10 +1134,14 @@ class P2P(object):
         resp = self.s.delete(
             self.config['P2P_API_ROOT'] + url,
             headers=self.http_headers(),
-            verify=False)
+            verify=True)
 
-        # Log the curl
-        log.debug("[P2P][DELETE] %s" % utils.request_to_curl(resp.request))
+        # Log the request curl if debug is on
+        if self.debug:
+            log.debug("[P2P][DELETE] %s" % utils.request_to_curl(resp.request))
+        # If debug is off, store a light weight log
+        else:
+            log.debug("[P2P][DELETE] %s" % url)
 
         self._check_for_errors(resp)
         return utils.parse_response(resp.content)
@@ -1146,11 +1153,15 @@ class P2P(object):
             self.config['P2P_API_ROOT'] + url,
             data=payload,
             headers=self.http_headers('application/json'),
-            verify=False
+            verify=True
         )
 
-        # Log the curl
-        log.debug("[P2P][POST] %s" % utils.request_to_curl(resp.request))
+        # Log the request curl if debug is on
+        if self.debug:
+            log.debug("[P2P][POST] %s" % utils.request_to_curl(resp.request))
+        # If debug is off, store a light weight log
+        else:
+            log.debug("[P2P][POST] %s" % url)
 
         resp_log = self._check_for_errors(resp)
 
@@ -1170,11 +1181,15 @@ class P2P(object):
             self.config['P2P_API_ROOT'] + url,
             data=payload,
             headers=self.http_headers('application/json'),
-            verify=False
+            verify=True
         )
 
-        # Log the curl
-        log.debug("[P2P][PUT] %s" % utils.request_to_curl(resp.request))
+        # Log the request curl if debug is on
+        if self.debug:
+            log.debug("[P2P][PUT] %s" % utils.request_to_curl(resp.request))
+        # If debug is off, store a light weight log
+        else:
+            log.debug("[P2P][PUT] %s" % url)
 
         resp_log = self._check_for_errors(resp)
 
