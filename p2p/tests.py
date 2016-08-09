@@ -545,6 +545,10 @@ class TestP2P(unittest.TestCase):
                     article_data['slug']))
 
     def test_file_url_not_found_error(self):
+        """
+        Tests that sending a bad photo url to p2p will raise
+        P2PFileURLNotFound.
+        """
         bad_photo_url = "http://www.latimes.com/bad_photo_url.png"
         payload = {
             'slug': self.first_test_story_slug,
