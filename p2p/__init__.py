@@ -1,3 +1,4 @@
+import re
 import os
 import json
 import math
@@ -1075,13 +1076,10 @@ class P2P(object):
                     raise P2PPhotoUploadError(resp.url, request_log)
                 elif u"This file type is not supported" in resp.content:
                     raise P2PInvalidFileType(resp.url, request_log)
-
+                elif re.search(r"The URL (.*) does not exist", resp.content):
+                    raise P2PFileURLNotFound(resp.url, request_log)
                 data = resp.json()
-
                 if 'errors' in data:
-                    if data['errors'][0].startswith("The URL") and \
-data['errors'][0].endswith("does not exist."):
-                        raise P2PFileURLNotFound(resp.url, request_log)
                     raise P2PException(data['errors'][0], request_log)
 
             except ValueError:
