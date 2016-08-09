@@ -5,6 +5,7 @@ from p2p import (
     P2PNotFound,
     P2PSlugTaken,
     filters,
+    P2PFileURLNotFound,
     P2PUniqueConstraintViolated
 )
 pp = pprint.PrettyPrinter(indent=4)
@@ -543,6 +544,19 @@ class TestP2P(unittest.TestCase):
                 self.assertTrue(self.p2p.delete_content_item(
                     article_data['slug']))
 
+    def test_file_url_not_found_error(self):
+        bad_photo_url = "http://www.latimes.com/bad_photo_url.png"
+        payload = {
+            'slug': self.first_test_story_slug,
+            'content_item_type_code': 'htmlstory',
+            'photo_upload': {
+                'alt_thumbnail': {
+                    'url': bad_photo_url
+                }
+            },
+        }
+        with self.assertRaises(P2PFileURLNotFound):
+            self.p2p.create_or_update_content_item(payload)
 
 class TestFilters(unittest.TestCase):
 
