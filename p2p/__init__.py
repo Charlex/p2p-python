@@ -1081,7 +1081,6 @@ class P2P(object):
                 data = resp.json()
                 if 'errors' in data:
                     raise P2PException(data['errors'][0], request_log)
-
             except ValueError:
                 pass
             resp.raise_for_status()
