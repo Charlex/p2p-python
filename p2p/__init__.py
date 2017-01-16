@@ -179,6 +179,21 @@ class P2P(object):
         self.s = requests.Session()
         self.s.mount('https://', TribAdapter())
 
+    def is_token_valid(self):
+        """
+        Determines whether or not the current token is valid. Uses a HEAD 
+        request to avoid a hefty call.
+        """
+        # Make the head request to the root url.
+        resp = self.head(self.config['P2P_API_ROOT'])
+
+        # If OK and 200 status, return true. 
+        if resp.ok and resp.status_code == 200:
+            return True
+
+        # Otherwise return false.
+        return False
+
     def get_content_item(self, slug, query=None, force_update=False):
         """
         Get a single content item by slug.
@@ -1556,3 +1571,22 @@ curl)
             except Exception:
                 log.error('[P2P][POST] EXCEPTION IN JSON PARSE: %s' % resp_log)
                 raise
+
+    @retry(P2PRetryableError)
+    def head(self, url):
+        resp = self.s.head(
+            url,
+            headers=self.http_headers(),
+            verify=True,
+            allow_redirects=True
+        )
+
+        # Log the request curl if debug is on
+        print utils.request_to_curl(resp.request)
+        if self.debug:
+            log.debug("[P2P][HEAD] %s" % utils.request_to_curl(resp.request))
+        # If debug is off, store a light weight log
+        else:
+            log.debug("[P2P][HEAD] %s" % url)
+
+        return resp

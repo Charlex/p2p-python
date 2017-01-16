@@ -866,3 +866,16 @@ class CollectionTest(BaseP2PTest):
         self.assertTrue(len(ci_ids) == len(data))
         for k in self.content_item_keys:
             self.assertIn(k, data[0].keys())
+
+class ValidTokenTest(BaseP2PTest):
+
+    def test_that_default_token_is_valid(self):
+        p2p = get_connection()
+        token_is_valid = p2p.is_token_valid()
+        self.assertTrue(token_is_valid, "The test token should be valid")
+
+    def test_that_a_bad_token_is_invalid(self):
+        p2p = get_connection()
+        p2p.config["P2P_API_KEY"] = "MYBADTOKEN"
+        token_is_valid = p2p.is_token_valid()
+        self.assertFalse(token_is_valid, "A bad token should not be valid")
