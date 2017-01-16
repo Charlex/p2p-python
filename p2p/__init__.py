@@ -1582,7 +1582,6 @@ curl)
         )
 
         # Log the request curl if debug is on
-        print utils.request_to_curl(resp.request)
         if self.debug:
             log.debug("[P2P][HEAD] %s" % utils.request_to_curl(resp.request))
         # If debug is off, store a light weight log
