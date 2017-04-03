@@ -48,6 +48,7 @@ def authenticate(username=None, password=None, token=None, auth_url=None):
 try:
     from django.contrib.auth.models import User
 
+
     class P2PBackend:
         def authenticate(self, username=None, password=None):
 
@@ -61,17 +62,22 @@ try:
 
                 try:
                     user = User.objects.get(username=local_username)
-
                 except User.DoesNotExist:
-                    user = User(
-                        username=local_username,
-                        email=userinfo['email'],
-                        first_name=userinfo['first_name'],
-                        last_name=userinfo['last_name'])
-                    user.set_unusable_password()
-                    user.is_staff = True
-                    user.is_superuser = True
-                    user.save()
+                    user = User(username=local_username)
+
+                # Update user data
+                user.email = userinfo['email']
+                user.first_name = userinfo['first_name']
+                user.last_name = userinfo['last_name']
+                user.is_staff = True
+                user.is_superuser = False
+                user.set_unusable_password()
+                user.save()
+
+                # Update the related p2p_profile data
+                user.p2p_profile.groups = json.dumps(userinfo['groups'])
+                user.p2p_profile.blacklisted = userinfo['blacklisted']
+                user.p2p_profile.save()
 
                 return user
             except P2PAuthError:
