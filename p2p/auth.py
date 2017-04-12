@@ -24,7 +24,7 @@ def authenticate(username=None, password=None, token=None, auth_url=None):
                         " in your environment variables or your Django config")
 
         s = requests.Session()
-        s.mount('https://', TribAdapter())
+        # s.mount('https://', TribAdapter())
         resp = s.post(
             auth_url,
             params={
@@ -32,7 +32,7 @@ def authenticate(username=None, password=None, token=None, auth_url=None):
                 'password': password,
                 'token': token,
             },
-            verify=False)
+            verify=True)
 
         if not resp.ok:
             if resp.status_code == 403:
